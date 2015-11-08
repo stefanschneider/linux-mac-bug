@@ -1,0 +1,1 @@
+sudo ip link set dev eth1 address 08:00:22:33:`openssl rand -hex 1`:`openssl rand -hex 1`

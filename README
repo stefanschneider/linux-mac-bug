@@ -1,0 +1,43 @@
+Requirements:
+ - Vagrant
+ - VirtualBox
+
+Run `vagrant up` to start the 3 linux servers.
+
+Run `/vagrant/server1.sh` from first VitrualBox VM. (user and password is: 'vagrant' and 'vagrant')
+Run `/vagrant/server2.sh` from the 2nd VM.
+Run `/vagrant/server3.sh` from the 3rd VM.
+
+Server 2 will not be able to communicate with server 1 because it will mark the old MAC address from server 2 as rechable. Server 3 will create TCP connections to server 1 and it this will cause server 1 to mark the old MAC address from server 2 as reachable. If server 3 will stop creating TCP connections, eventually the old MAC will expire.
+
+This behaviour was happening in a large OpenStack deployment.
+
+Note: lucid64 did not have this bug
+
+Workaround:
+ - Reduce /proc/sys/net/ipv4/neigh/*/base_rechable_time_ms to a lower time duration
+
+-- server1
+
+sudo ip link set dev eth1 promisc on
+
+watch -n 0.5 ip -s neigh show
+
+-- server2
+
+sudo ip link set dev eth1 promisc on
+
+nc -w 1 192.168.50.4 22
+
+sudo ip link set dev eth1 address 08:00:22:33:`openssl rand -hex 1`:`openssl rand -hex 1`
+
+sudo ip neigh replace 192.168.50.4 nud permanent dev eth1 lladdr 08:00:27:fb:9e:99
+
+watch -n 0.5 nc -w 1 192.168.50.4 22
+
+
+-- server3
+
+sudo ip link set dev eth1 promisc on
+
+watch -n 0.5  nc -w 1 192.168.50.4 22
